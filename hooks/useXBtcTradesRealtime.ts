@@ -1,19 +1,21 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Trade } from "../types/Trade";
-
-const socket = new WebSocket('wss://ws.bitmex.com/realtime?subscribe=trade');
+import { WorkerMessageT } from "../types/WorkerMessage";
+import { TradeWorkConfigT } from "../types/TradeWorkConfigT";
 
 export const useXBtcTradesRealtime = () => {
+    const workerRef = useRef<Worker>();
+    const [status, setStatus] = useState<'running' | 'stopped' | 'terminated'>('stopped');
+    const [trades, setTrades] = useState<Trade[]>([]);
 
-    const [state, setState] = useState<'ready' | 'idle'>('idle');
+    useEffect(() => {   
+        workerRef.current = new Worker(new URL("../worker.ts", import.meta.url));
 
-    const subscribe = (callback: (newTrades: Trade[]) => void) => {
-        socket.onmessage = function ({ data }: any) {
-            const result = JSON.parse(data).data;
-            let trades: Trade[] = [];
+        workerRef.current.onmessage = ({ data: { data }}) => {
+            let newTrades: Trade[] = [];
 
-            if (result) {
-                trades = result.map(({ grossValue,
+            if (data) {
+                newTrades = data.map(({ grossValue,
                     price,
                     side,
                     size,
@@ -33,27 +35,68 @@ export const useXBtcTradesRealtime = () => {
                     return trade;
                 });
             }
+            
+            setTrades(newTrades)
+        }
 
+        workerRef.current.onerror = (error) => {
+            console.error('Worker error:', error.message)
+        }
 
-            callback(trades)
-        };
-    }
-
-    const unsubscribe = () => {
-        socket.close();
-    }
-
-    useEffect(() => {
-        socket.onopen = function () {
-
-            setState('ready')
-        };
-
+        return () => {
+            if (workerRef.current) {
+                workerRef.current.terminate()
+            }
+        }
+        
     }, []);
 
+    const start = () => {
+        setStatus('running')
+    
+        const workerMessage: WorkerMessageT<TradeWorkConfigT> = {
+          type: 'init',
+          payload: {
+            data: {
+              subscribe: 'trade'
+            },
+          },
+        }
+
+        if (workerRef.current) {
+          workerRef.current.postMessage(workerMessage)
+        }
+    }
+
+
+    const stop = () => {
+        setStatus('stopped')
+        const workerMessage: WorkerMessageT<TradeWorkConfigT> = {
+          type: 'stop',
+        }
+        if (workerRef.current) {
+          workerRef.current.postMessage(workerMessage)
+        }
+    }
+
+    const terminate = () => {
+        setStatus('terminated');
+        const workerMessage: WorkerMessageT<TradeWorkConfigT> = {
+            type: 'stop',
+        }
+
+        if (workerRef.current) {
+            workerRef.current.postMessage(workerMessage)
+            workerRef.current.terminate()
+        }
+    }
+
+
     return {
-        state,
-        subscribe,
-        unsubscribe
+        incoming: trades,
+        status,
+        terminate,
+        start,
+        stop
     }
 }

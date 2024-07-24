@@ -1,5 +1,5 @@
-import { TradeWorkConfigT } from "../types/TradeWorkConfigT";
-import {  WorkerMessageT } from "../types/WorkerMessage"
+import { TradeWorkConfigT } from "./types/TradeWorkConfigT";
+import {  WorkerMessageT } from "./types/WorkerMessage"
 
 let pricesWs: WebSocket | null = null;
 

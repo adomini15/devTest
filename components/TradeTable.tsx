@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { CalendarClock, PackageOpen, TrendingDownIcon, TrendingUpIcon } from 'lucide-react';
 import { capitalize, formatDate } from '../lib/utils';
 import { Badge } from './ui/badge';
+import Loading from './Loading';
 
 const columns: ColumnDef<Trade>[] = [
   {
@@ -128,8 +129,8 @@ const TradeTable = ({ data }: TradeTableProps) => {
             })
           ) : (
             <TableRow>
-              <TableCell colSpan={columns.length} className="h-24 text-center">
-                No results.
+              <TableCell colSpan={columns.length} className="flex h-24 items-center justify-center">
+                <Loading height={24} width={24} className="mr-4" /> Waiting...
               </TableCell>
             </TableRow>
           )}

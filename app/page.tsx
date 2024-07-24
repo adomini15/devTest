@@ -10,46 +10,50 @@ import { populate } from '../actions';
 import Loading from '../components/Loading';
 import { ScrollArea } from '../components/ui/scroll-area';
 import Link from 'next/link';
+import { CircleCheck } from 'lucide-react';
 
 let lastUnsynchronizedIncoming = 0;
 
 export default function Page() {
   const [isPending, startTransition] = useTransition();
-  const { state, subscribe, unsubscribe } = useXBtcTradesRealtime();
+  const { start, status, stop, terminate, incoming } = useXBtcTradesRealtime();
   const [trades, setTrades] = useState<Trade[]>([]);
+  const [upgraded, setUpgraded] = useState(false);
 
   useEffect(() => {
-    handleStreamSubscription();
-
-    return () => {
-      if (state == 'ready') {
-        unsubscribe();
-      }
-    };
+    start();
   }, []);
 
-  const handleStreamSubscription = () => {
-    subscribe((newTrades: Trade[]) => {
+  useEffect(() => {
+    if (incoming) {
       setTrades((oldTrades) => {
-        lastUnsynchronizedIncoming += newTrades.length;
+        lastUnsynchronizedIncoming += incoming.length;
 
-        return [...newTrades, ...oldTrades];
+        return [...incoming, ...oldTrades];
       });
-    });
-  };
+    }
+  }, [incoming]);
 
   const handleSyncLastTrades = () => {
-    startTransition(() => {
+    setUpgraded(false);
+    stop();
+
+    startTransition(async () => {
       if (lastUnsynchronizedIncoming > 0) {
-        populate(trades.slice(-lastUnsynchronizedIncoming));
+        await populate(trades.slice(-lastUnsynchronizedIncoming));
         lastUnsynchronizedIncoming = 0;
       }
+
+      setUpgraded(true);
+      start();
     });
   };
 
-  if (state == 'idle') {
-    return <p>Loading</p>;
-  }
+  console.log(incoming);
+
+  // if (state == 'idle') {
+  //   return <p>Loading</p>;
+  // }
 
   return (
     <div className="text-base">
@@ -70,6 +74,9 @@ export default function Page() {
                 onClick={handleSyncLastTrades}
               >
                 {isPending && <Loading width={20} height={20} className="mr-2" />}
+                {!isPending && upgraded && (
+                  <CircleCheck width={20} height={20} className="mr-2 text-green-400" />
+                )}{' '}
                 Sync Changes
               </Button>
             </div>
