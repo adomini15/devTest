@@ -6,7 +6,7 @@ import { tradesTable } from "../db/schema";
 import { Trade } from "../types/Trade";
 
 export async function search(query: string) {
-    const trades = await db.select().from(tradesTable).where(or(
+    const trades = await db.select().from(tradesTable).limit(20).where(or(
         ...['symbol','price','size','grossValue'].map((name) => {
             return like(tradesTable[name], `%${query}%`)
         })
