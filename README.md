@@ -1,5 +1,7 @@
 # Usage
 
+Deployed application: https://xbtc.vercel.app/
+
 Use the Sync Changes Button to insert the last recent trades in the database.
 Click on Show Database to go to the trades page to visualize the database table.
 
